@@ -1,0 +1,66 @@
+vpc:
+  cidr: "10.0.0.0/16"
+  enable_dns_hostnames: true
+
+subnet_groups:
+  "public":
+    map_public_ip_on_launch: false
+    subnets:
+      - { cidr: "10.0.1.0/24", availability_zone: "ap-northeast-2a" }
+      - { cidr: "10.0.2.0/24", availability_zone: "ap-northeast-2b" }
+  "private":
+    subnets:
+      - { cidr: "10.0.11.0/24", availability_zone: "ap-northeast-2a" }
+      - { cidr: "10.0.12.0/24", availability_zone: "ap-northeast-2b" }
+security_groups:
+  - target_service_name: "alb"
+    ingress_rules:
+      - protocol: "tcp"
+        from_port: 80
+        to_port: 80
+        cidr_blocks:
+          - "0.0.0.0/0"
+        description: ""
+      - protocol: "tcp"
+        from_port: 443
+        to_port: 443
+        cidr_blocks:
+          - "0.0.0.0/0"
+        description: ""
+    egress_rules:
+      - protocol: "-1"
+        from_port: 0
+        to_port: 0
+        cidr_blocks:
+          - "0.0.0.0/0"
+        description: "Allow to communicate to the Internet."
+alb:
+  - name_suffix: be
+    alb_listners:
+      - listener_name: "redirect_listener"
+        port: 80
+        protocol: "HTTP"
+        default_action_type: "REDIRECT_301"
+      - listener_name: "default_listener"
+        port: 443
+        protocol: "HTTPS"
+        certificate_arn: "arn:aws:acm:ap-northeast-2:643554540047:certificate/c81d7353-f285-4f34-867e-781378d4e304"
+        default_action_type: "FIXED_RESPONSE"
+  - name_suffix: fe
+    alb_listners:
+      - listener_name: "redirect_listener"
+        port: 80
+        protocol: "HTTP"
+        default_action_type: "REDIRECT_301"
+      - listener_name: "default_listener"
+        port: 443
+        protocol: "HTTPS"
+        certificate_arn: "arn:aws:acm:ap-northeast-2:643554540047:certificate/c81d7353-f285-4f34-867e-781378d4e304"
+        default_action_type: "FIXED_RESPONSE"
+route53:
+  - domain: "sample"
+    sub_domains:
+      - sub_domain: "prod-api"
+        mapping_alb_name_suffix: "be"
+      - sub_domain: ""
+        mapping_alb_name_suffix: "fe"
